@@ -25,6 +25,7 @@ int main() {
     stdio_init_all();
 
     printf("Hello GPIO IRQ\n");
+    gpio_set_dir(GPIO_WATCH_PIN, GPIO_IN);
     gpio_init(GPIO_WATCH_PIN);
     gpio_set_irq_enabled_with_callback(GPIO_WATCH_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
 
