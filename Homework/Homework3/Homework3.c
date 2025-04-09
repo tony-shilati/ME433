@@ -83,7 +83,7 @@ int main() {
 
             // Print the samples
             for (int i = 0; i < num_samples; i++) {
-                printf("Sample %d: %d, ", i + 1, samples[i]);
+                printf("Sample %d: %1.2f V, ", i + 1, samples[i] * 3.3f / 4096.0f);
                 printf("\r\n");
             }
 
