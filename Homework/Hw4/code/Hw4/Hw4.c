@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <math.h>
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
 
@@ -47,11 +48,14 @@ int main()
     // For more examples of SPI use see https://github.com/raspberrypi/pico-examples/tree/master/spi
 
     uint16_t triangle_signal = 0;
+    uint16_t sine_wave_signal = 0;
     uint16_t timer = 0;
     while (true) {
         // Generate a triangle wave
         triangle_signal = gen_triangle_wave(timer);
+        sine_wave_signal = gen_sine_wave(timer);
         send_signal(triangle_signal, 'a');
+        send_signal(sine_wave_signal, 'b');
         timer++;
         if (timer > 4096) {
             timer = 0;
@@ -75,6 +79,13 @@ uint16_t gen_triangle_wave(uint16_t time){
         signal = 1024 - ((time - 2048) / 2048.0f * 1024);
     }
 
+    return signal;
+}
+
+uint16_t gen_sine_wave(uint16_t time){
+    uint16_t signal = 0;
+    // Generate a 2 hz sine wave
+    signal = (sin(time / 4096.0f * 4 * M_PI) + 1) / 2 * 1024;
     return signal;
 }
 
