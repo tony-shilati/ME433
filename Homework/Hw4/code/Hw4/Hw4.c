@@ -43,12 +43,12 @@ int main()
     gpio_put(PIN_CS, 1);
     // For more examples of SPI use see https://github.com/raspberrypi/pico-examples/tree/master/spi
 
-    uint16_t signal = 0;
+    uint16_t signal = 1;
     while (true) {
         send_signal(signal, 'a');
-        signal++;
+        signal+=16;
         if (signal > 1024) {
-            signal = 0;
+            signal = 0b1;
         }
         sleep_ms(5);
     }
@@ -63,7 +63,7 @@ void send_signal(uint16_t signal, char channel){
     }
 
     // Shift the signal to the left by 2 bits
-    signal << 2;
+    signal = signal << 2;
 
     // Set the channel bit
     uint16_t channel_bit = 0;
