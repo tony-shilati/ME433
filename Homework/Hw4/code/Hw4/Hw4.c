@@ -24,7 +24,7 @@ static inline void cs_deselect() {
     asm volatile("nop \n nop \n nop");
 }
 
-void send_signal(uint16_t signal);
+void send_signal(uint16_t signa, char channel);
 
 
 int main()
@@ -32,7 +32,7 @@ int main()
     stdio_init_all();
 
     // SPI initialisation. This example will use SPI at 1MHz.
-    spi_init(SPI_PORT, 12*100);
+    spi_init(SPI_PORT, 20*1000*1000);
     gpio_set_function(PIN_MISO, GPIO_FUNC_SPI);
     gpio_set_function(PIN_CS,   GPIO_FUNC_SIO);
     gpio_set_function(PIN_SCK,  GPIO_FUNC_SPI);
@@ -43,32 +43,54 @@ int main()
     gpio_put(PIN_CS, 1);
     // For more examples of SPI use see https://github.com/raspberrypi/pico-examples/tree/master/spi
 
+    uint16_t signal = 0;
     while (true) {
-        uint16_t signal = 0b1111000011110000;
-        send_signal(signal);
-        sleep_ms(1000);
+        send_signal(signal, 'a');
+        signal++;
+        if (signal > 1024) {
+            signal = 0;
+        }
+        sleep_ms(5);
     }
 }
 
 
-void send_signal(uint16_t signal){
-    /*
+void send_signal(uint16_t signal, char channel){
+
+    // Squash the signal to 10 bits
     if (signal > 1024) {
         signal = 1024;
     }
-    else if (signal < 0) {
-        signal = 0;
+
+    // Shift the signal to the left by 2 bits
+    signal << 2;
+
+    // Set the channel bit
+    uint16_t channel_bit = 0;
+    if (channel == 'a'){
+        channel_bit = 0 << 15;
+    } else if (channel == 'b'){
+        channel_bit = 1 << 15;
     }
-        */
 
+    // Set the config bits
+    uint16_t config_bits = 0b111 << 12; // 3 bits for the config
 
+    uint16_t spi_msg = 0;
+    // Combine the signal, channel, and config bits
+    spi_msg |= signal;
+    spi_msg |= channel_bit;
+    spi_msg |= config_bits;
 
     // Pull the chip slect pin low
     cs_select();
-
-
     // Send the signal
-    spi_write_blocking(spi_default, (const uint8_t *)&signal, 2);
+
+    uint8_t spi_msg_arry[2];
+    spi_msg_arry[0] = (spi_msg >> 8) & 0xFF; // MSB
+    spi_msg_arry[1] = spi_msg & 0xFF; // LSB
+
+    spi_write_blocking(spi_default, spi_msg_arry, 2);
 
     // Pull the chip select pin high
     cs_deselect();
