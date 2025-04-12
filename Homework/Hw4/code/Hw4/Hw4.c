@@ -26,6 +26,9 @@ static inline void cs_deselect() {
 
 void send_signal(uint16_t signa, char channel);
 
+uint16_t gen_triangle_wave(uint16_t time);
+uint16_t gen_sine_wave(uint16_t time);
+
 
 int main()
 {
@@ -43,15 +46,36 @@ int main()
     gpio_put(PIN_CS, 1);
     // For more examples of SPI use see https://github.com/raspberrypi/pico-examples/tree/master/spi
 
-    uint16_t signal = 1;
+    uint16_t triangle_signal = 0;
+    uint16_t timer = 0;
     while (true) {
-        send_signal(signal, 'a');
-        signal+=16;
-        if (signal > 1024) {
-            signal = 0b1;
+        // Generate a triangle wave
+        triangle_signal = gen_triangle_wave(timer);
+        send_signal(triangle_signal, 'a');
+        timer++;
+        if (timer > 4096) {
+            timer = 0;
         }
-        sleep_ms(5);
+        sleep_us(120);
     }
+}
+
+
+
+/*
+ * Helper functions 
+ */
+
+uint16_t gen_triangle_wave(uint16_t time){
+    uint16_t signal = 0;
+
+    if (time < 2048) {
+        signal = time / 2048.0f * 1024;
+    } else {
+        signal = 1024 - ((time - 2048) / 2048.0f * 1024);
+    }
+
+    return signal;
 }
 
 
