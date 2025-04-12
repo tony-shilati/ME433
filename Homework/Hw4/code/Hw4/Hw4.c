@@ -56,7 +56,7 @@ int main()
         if (timer > 4096) {
             timer = 0;
         }
-        sleep_us(120);
+        sleep_us(240);
     }
 }
 
