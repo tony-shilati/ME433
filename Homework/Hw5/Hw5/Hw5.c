@@ -39,11 +39,34 @@ static inline void cs2_deselect() {
 
 // Function prototypes
 void send_dac_signal(uint16_t signa, char channel);
+void spi_ram_init();
+void write_ext_memory(float *data, uint16_t address);
+float read_ext_memory(uint16_t address);
 
 
 int main()
 {
     stdio_init_all();
+
+    // SPI initialization
+    spi_init(SPI_PORT, 20*1000*1000);
+    gpio_set_function(PIN_MISO, GPIO_FUNC_SPI);
+    gpio_set_function(PIN_CS1,   GPIO_FUNC_SIO);
+    gpio_set_function(PIN_CS2,   GPIO_FUNC_SIO);
+    gpio_set_function(PIN_SCK,  GPIO_FUNC_SPI);
+    gpio_set_function(PIN_MOSI, GPIO_FUNC_SPI);
+
+    // Drive cs pins high
+    gpio_set_dir(PIN_CS1, GPIO_OUT);
+    gpio_set_dir(PIN_CS2, GPIO_OUT);
+    gpio_put(PIN_CS1, 1);
+    gpio_put(PIN_CS2, 1);
+
+    float sin_point = 0;
+    for (int i = 0; i < 1000; i++){
+        // Generate point on a sine wave and write to external memory
+        sin_point = (sin(i / 1000.0f * 2 * M_PI) + 1);
+    }
 
     while (true) {
         printf("Hello, world!\n");
@@ -56,6 +79,10 @@ int main()
 /*
  * Helper function definitions
  */
+
+ void spi_ram_init(){
+
+ }
 
 
  void send_dac_signal(uint16_t signal, char channel){

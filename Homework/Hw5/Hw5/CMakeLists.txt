@@ -46,6 +46,7 @@ pico_enable_stdio_usb(Hw5 0)
 
 # Add the standard library to the build
 target_link_libraries(Hw5
+        hardware_spi
         pico_stdlib)
 
 # Add the standard include files to the build
