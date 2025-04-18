@@ -36,12 +36,18 @@ static inline void cs2_deselect() {
     asm volatile("nop \n nop \n nop");
 }
 
+// Union definition
+union FloatInt {
+    float f;
+    uint32_t i;
+};
+
 
 // Function prototypes
 void send_dac_signal(uint16_t signa, char channel);
 void spi_ram_init();
-void write_ext_memory(float *data, uint16_t address);
-float read_ext_memory(uint16_t address);
+void write_ext_memory_seq(float *data, uint16_t address);
+float read_ext_memory_seq(uint16_t address);
 
 
 int main()
@@ -62,10 +68,19 @@ int main()
     gpio_put(PIN_CS1, 1);
     gpio_put(PIN_CS2, 1);
 
-    float sin_point = 0;
+    // Write the waveform to the RAM
+    union FloatInt sin_point;
+    uint16_t write_address;
     for (int i = 0; i < 1000; i++){
         // Generate point on a sine wave and write to external memory
-        sin_point = (sin(i / 1000.0f * 2 * M_PI) + 1);
+        sin_point.f = (sin(i / 1000.0f * 2 * M_PI) + 1);
+        write_address = 4 * i; // 4 bytes per float
+
+        cs1_select();
+        spi_write_blocking(SPI_PORT, (uint8_t *)&write_address, 2);
+        spi_write_blocking(SPI_PORT, (uint8_t *)&sin_point.i, sizeof(sin_point));
+        cs1_deselect();
+        sleep_ms(1);
     }
 
     while (true) {
@@ -81,6 +96,16 @@ int main()
  */
 
  void spi_ram_init(){
+    // Create the config data
+    uint8_t config_data[2];
+    config_data[0] = 0b00000001; // Select SRAM read/write mode
+    config_data[1] = 0b01000000; // Set SRAM read/write mode
+
+    // Write the config data to the SRAM chip
+    cs2_select();
+    spi_write_blocking(SPI_PORT, config_data, 2);
+    cs2_deselect();
+    sleep_ms(10); // Wait for the chip to process the config data
 
  }
 
