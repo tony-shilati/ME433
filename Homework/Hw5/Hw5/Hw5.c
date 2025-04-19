@@ -50,19 +50,14 @@ union FloatInt {
 // Function prototypes
 void send_dac_signal(uint16_t signal, char channel);
 void spi_ram_init();
-void write_ext_memory_seq(float *data, uint16_t address);
-float read_ext_memory_seq(uint16_t address);
 
 
 int main()
 {
     stdio_init_all();
-    while (!stdio_usb_connected()) {
-        sleep_ms(100);
-    }
 
     // SPI initialization
-    spi_init(SPI_PORT, 1000 * 1000); // 1000kHz
+    spi_init(SPI_PORT, 20 * 1000 * 1000); // 1000kHz
     gpio_set_function(PIN_MISO, GPIO_FUNC_SPI);
     gpio_set_function(PIN_CS1,   GPIO_FUNC_SIO);
     gpio_set_function(PIN_CS2,   GPIO_FUNC_SIO);
@@ -75,15 +70,17 @@ int main()
     gpio_put(PIN_CS1, 1);
     gpio_put(PIN_CS2, 1);
 
+    // Initialize the SPI RAM
+    spi_ram_init();
+
+    
     // Write the waveform to the RAM
     union FloatInt sin_point;
     uint16_t write_address;
-    for (int i = 0; i < 1000; i++){
+    for (uint16_t i = 0; i < 1000; i++){
         // Generate point on a sine wave and write to external memory
         sin_point.f = (sin(i / 1000.0f * 2 * M_PI) + 1) / 2; // Scale to 0-1
         write_address = 4 * i; // 4 bytes per float
-
-        printf("Writing to address %d: %f\n", write_address, sin_point.f);
 
         
         // conver the data to an array of bytes
@@ -96,33 +93,35 @@ int main()
         write_bytes[5] = (sin_point.i >> 8) & 0xFF;
         write_bytes[6] = sin_point.i & 0xFF; // LSB
         
-        // Write the data to the external memory
-
-
         cs2_select();
         spi_write_blocking(SPI_PORT, write_bytes, 7);
         cs2_deselect();
-    }
 
-    int counter = 0;
-    uint16_t read_address = 0;
+    }
+    
+    uint16_t counter = 0;
+    uint16_t read_address;
     union FloatInt read_point_union;
     uint16_t dac_signal = 0;
+
     while (true) {
         // Read the waveform from the RAM
         read_address = 4 * counter; // 4 bytes per float
 
-        uint8_t bytes[4];
+        uint8_t read_bytes[4];
+        uint8_t read_config[3];
+        read_config[0] = ram_read;
+        read_config[1] = (read_address >> 8) & 0xFF; // MSB
+        read_config[2] = read_address & 0xFF; // LSB
         
         cs2_select();
-        spi_write_blocking(SPI_PORT, &ram_read, 1);
-        spi_write_blocking(SPI_PORT, (uint8_t *)&read_address, 2);
-        spi_read_blocking(SPI_PORT, 0, bytes, sizeof(read_point_union));
+        spi_write_blocking(SPI_PORT, read_config, 3);
+        spi_read_blocking(SPI_PORT, 0, read_bytes, 4);
         cs2_deselect();
 
-        read_point_union.i = (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3];
+        read_point_union.i = (read_bytes[0] << 24) | (read_bytes[1] << 16) | (read_bytes[2] << 8) | read_bytes[3];
         dac_signal = read_point_union.f * 1024.0f ; // Scale to 10 bits
-        printf("DAC signal: %f\n", read_point_union.f);
+        // printf("DAC signal: %f\n", read_point_union.f);
         send_dac_signal(dac_signal, 'a');
 
         // Update counter
@@ -132,7 +131,7 @@ int main()
             counter = 0;
         }
 
-        sleep_ms(50);
+        sleep_ms(1);
     }
 }
 
