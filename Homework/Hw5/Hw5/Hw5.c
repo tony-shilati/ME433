@@ -50,11 +50,16 @@ union FloatInt {
 // Function prototypes
 void send_dac_signal(uint16_t signal, char channel);
 void spi_ram_init();
+void float_math();
 
 
 int main()
 {
     stdio_init_all();
+    while (!stdio_usb_connected()) {
+        sleep_ms(100);
+    }
+    float_math();
 
     // SPI initialization
     spi_init(SPI_PORT, 20 * 1000 * 1000); // 1000kHz
@@ -197,4 +202,56 @@ int main()
     // Pull the chip select pin high
     cs1_deselect();
 
+}
+
+void float_math(){
+    volatile float f1, f2;
+    printf("Enter two floats to use:");
+    scanf("%f %f", &f1, &f2);
+    printf("\n");
+    volatile float f_add, f_sub, f_mult, f_div;
+    absolute_time_t start_time, end_time;
+    uint64_t t1, t2;
+
+    // Addition
+    start_time = get_absolute_time();
+    t1 = to_us_since_boot(start_time);
+    for (int i = 0; i < 1000; i++) {
+        f_add = f1+f2;
+    }
+    end_time = get_absolute_time();
+    t2 = to_us_since_boot(end_time);
+    printf("Addition Cycles: %f\n", (t2 - t1) / 6.67f);
+
+    // Subtraction
+    start_time = get_absolute_time();
+    t1 = to_us_since_boot(start_time);
+    for (int i = 0; i < 1000; i++) {
+        f_sub = f1-f2;
+    }
+    end_time = get_absolute_time();
+    t2 = to_us_since_boot(end_time);
+    printf("Subtraction Cycles: %f\n", (t2 - t1) / 6.67f);
+    
+    // Multiplication
+    start_time = get_absolute_time();
+    t1 = to_us_since_boot(start_time);
+    for (int i = 0; i < 1000; i++) {
+        f_mult = f1*f2;
+    }
+    end_time = get_absolute_time();
+    t2 = to_us_since_boot(end_time);
+    printf("Multiplication Cycles: %f\n", (t2 - t1) / 6.67f);
+
+    // Division
+    start_time = get_absolute_time();
+    t1 = to_us_since_boot(start_time);
+    for (int i = 0; i < 1000; i++) {
+        f_div = f1/f2;
+    }
+    end_time = get_absolute_time();
+    t2 = to_us_since_boot(end_time);
+    printf("Division Cycles: %f\n", (t2 - t1) / 6.67f);
+    
+    
 }
