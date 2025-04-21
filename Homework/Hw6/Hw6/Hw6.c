@@ -11,6 +11,7 @@
 #define ADDR 0b0100000 // I2C address of the GPIO extension board
 
 void init_gpio_extension();
+void external_LED_button();
 
 
 
@@ -43,7 +44,7 @@ int main()
     uint64_t start_time = to_ms_since_boot(get_absolute_time()); // Get the current time
     while (true) {
 
-        
+        external_LED_button(); // Check the button state and set the LED accordingly
 
         if (to_ms_since_boot(get_absolute_time()) - start_time > 500) { // If 0.5 second has passed
             start_time = to_ms_since_boot(get_absolute_time()); // Reset the timer
@@ -78,4 +79,39 @@ void init_gpio_extension() {
     buf[0] = 0x0A; // OLAT register
     buf[1] = 0b10000000; // Set GP7 to high
     i2c_write_blocking(I2C_PORT, ADDR, buf, 2, false); // Write to the IODIR register
+
+    sleep_ms(500); // Sleep for 100ms
+
+    // Set GP7 to low
+    buf[0] = 0x0A; // OLAT register
+    buf[1] = 0b00000000; // Set GP7 to high
+    i2c_write_blocking(I2C_PORT, ADDR, buf, 2, false); // Write to the IODIR register
 }
+
+
+void external_LED_button(){
+
+    uint8_t button_state;
+    uint8_t gpio_addr = 0x09;
+
+    // Get the button state
+    i2c_write_blocking(I2C_PORT, ADDR, &gpio_addr, 1, true); // Read the GPIO state
+    i2c_read_blocking(I2C_PORT, ADDR, &button_state, 1, false); // Read the GPIO state
+
+    uint8_t buf[2];
+    if (!(button_state & 0b00000001)) { // If the button is pressed
+        // Set GP7 to high
+        buf[0] = 0x0A; // OLAT register
+        buf[1] = 0b10000000; // Set GP7 to high
+        i2c_write_blocking(I2C_PORT, ADDR, buf, 2, false); // Write to the IODIR register
+        
+    } else {
+        // Set GP7 to high
+        buf[0] = 0x0A; // OLAT register
+        buf[1] = 0b00000000; // Set GP7 to high
+        i2c_write_blocking(I2C_PORT, ADDR, buf, 2, false); // Write to the IODIR register
+        
+    }
+}
+
+
