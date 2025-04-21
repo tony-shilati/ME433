@@ -35,9 +35,9 @@ int main()
     sleep_ms(100); // Sleep for 1 second
     gpio_put(7, 1);
 
-    gpio_init(15); // Initialize GPIO 15
-    gpio_set_dir(15, GPIO_OUT); // Set GPIO 15 as output for heartbeat LED
-    gpio_put(15, 1); // Turn on the LED
+    gpio_init(25); // Initialize GPIO 15
+    gpio_set_dir(25, GPIO_OUT); // Set GPIO 15 as output for heartbeat LED
+    gpio_put(25, 1); // Turn on the LED
 
     init_gpio_extension(); // Initialize the GPIO extension board
 
@@ -48,7 +48,7 @@ int main()
 
         if (to_ms_since_boot(get_absolute_time()) - start_time > 500) { // If 0.5 second has passed
             start_time = to_ms_since_boot(get_absolute_time()); // Reset the timer
-            gpio_put(15, !gpio_get(15)); // Toggle the LED
+            gpio_put(25, !gpio_get(25)); // Toggle the LED
         }
     
         // printf("Hello World!\n"); // Print Hello World to the console
