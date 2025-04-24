@@ -31,36 +31,46 @@ int main()
 
     // I2C Initialization. Using it at 400Khz.
     i2c_init(I2C_PORT, 1000*1000);
-    
     gpio_set_function(I2C_SDA, GPIO_FUNC_I2C);
     gpio_set_function(I2C_SCL, GPIO_FUNC_I2C);
     gpio_pull_up(I2C_SDA);
     gpio_pull_up(I2C_SCL);
-    // For more examples of I2C use see https://github.com/raspberrypi/pico-examples/tree/master/i2c
 
     // Set up the LED display driver
     ssd1306_setup();
+    ssd1306_clear();
+    ssd1306_update();
 
     // Initialize the ADC
     adc_init(); // init the adc module
     adc_gpio_init(26); // set ADC0 pin to be adc input instead of GPIO
     adc_select_input(0); // select to read from ADC0
 
-    unsigned char str[256];
-    sprintf(str, "Bwazingababababababababababababababababababababababababababababababababababababababab");
-    ssd1306_print_string(0, 0, str);
-
+    
+    float frame_rate = 0.0; // Initialize frame rate variable
+    uint64_t loop_time;
     while (true) {
+        loop_time = to_ms_since_boot(get_absolute_time());
 
-        
+        // Print the ADC0 value on the display
+        uint16_t adc_value = adc_read();
+        float voltage = (adc_value / 4095.0) * 3.3; // Convert ADC value to voltage
+        char buffer[20];
+        sprintf(buffer, "ADC0: %1.2f V", voltage);
+        ssd1306_print_string(0, 0, buffer);
 
-        
+        // Print the framerate of the display below the ADC value
+        sprintf(buffer, " FPS: %1.2f Hz", frame_rate);
+        ssd1306_print_string(0, 12, buffer); // Print the frame rate to the display
+
         // Flip the hearbeat LED at 1Hz
         if (to_ms_since_boot(get_absolute_time()) - start_time > 1000) { 
             start_time = to_ms_since_boot(get_absolute_time()); 
             gpio_put(25, !gpio_get(25)); 
         }
 
+        // Calculate the frame rate
+        frame_rate = 1000.0 / (to_ms_since_boot(get_absolute_time()) - loop_time); // Calculate frame rate
     }
 }
 
@@ -82,7 +92,7 @@ int main()
         ssd1306_draw_ASCII(x, y, current_byte - 0x20);
         x += 7; // Move to the next character position
 
-        if (x > 128) {
+        if (x > 123) {
             x = 0; // Reset x position if it exceeds the screen width
             y += 8; // Move to the next line
         }
@@ -92,7 +102,6 @@ int main()
         }
 
         i++;
-        sleep_ms(100); // Add a delay between characters
     }
 }
  
