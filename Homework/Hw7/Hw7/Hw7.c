@@ -13,12 +13,14 @@
 
 void ssd1306_draw_ASCII(unsigned char x, unsigned char y, unsigned char character);
 void ssd1306_update_vertical_byte(unsigned char x, unsigned char y, unsigned char byte);
+void ssd1306_print_string(unsigned char x, unsigned char y, unsigned char *string);
 
 
 
 int main()
 {
     stdio_init_all();
+    
 
     // Initialize GPIO 25 for heartbeat LED
     gpio_init(25); // Initialize GPIO 15
@@ -38,21 +40,14 @@ int main()
     // Set up the LED display driver
     ssd1306_setup();
 
-    unsigned char color = 1;
-    unsigned char dir = 0;
-    unsigned char counter = 0x20;
+    unsigned char str[20];
+    sprintf(str, "Hello World!");
+    ssd1306_print_string(10, 16, str);
+
     while (true) {
 
-        ssd1306_clear();
-        ssd1306_update();
-        ssd1306_draw_ASCII(10, 16, counter);
-        ssd1306_update();
+        
 
-        // Increment the counter
-        counter++;
-        if (counter > 0x7F) {
-            counter = 0;
-        }
         
         // Flip the hearbeat LED at 1Hz
         if (to_ms_since_boot(get_absolute_time()) - start_time > 1000) { 
@@ -60,8 +55,6 @@ int main()
             gpio_put(25, !gpio_get(25)); 
         }
 
-        // Wait for a short time
-        sleep_ms(2000);
     }
 }
 
@@ -71,6 +64,21 @@ int main()
 /*
  * Helper function defintions
  */
+
+ void ssd1306_print_string(unsigned char x, unsigned char y, unsigned char *string){
+    unsigned char current_byte;
+    unsigned char i = 0;
+
+    while (string[i] != '\0') {
+        current_byte = string[i];
+
+        ssd1306_draw_ASCII(x, y, current_byte - 0x20);
+        printf("ASCII: %d\n", current_byte);
+        x += 7; // Move to the next character position
+        i++;
+        sleep_ms(100); // Add a delay between characters
+    }
+}
  
  void ssd1306_draw_ASCII(unsigned char x, unsigned char y, unsigned char character) {
     unsigned char current_byte;
