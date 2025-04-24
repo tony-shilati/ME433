@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
+#include "hardware/adc.h"
 #include "ssd1306.h"
 #include "font.h"
 
@@ -40,9 +41,14 @@ int main()
     // Set up the LED display driver
     ssd1306_setup();
 
-    unsigned char str[20];
-    sprintf(str, "Hello World!");
-    ssd1306_print_string(10, 16, str);
+    // Initialize the ADC
+    adc_init(); // init the adc module
+    adc_gpio_init(26); // set ADC0 pin to be adc input instead of GPIO
+    adc_select_input(0); // select to read from ADC0
+
+    unsigned char str[256];
+    sprintf(str, "Bwazingababababababababababababababababababababababababababababababababababababababab");
+    ssd1306_print_string(0, 0, str);
 
     while (true) {
 
@@ -68,13 +74,23 @@ int main()
  void ssd1306_print_string(unsigned char x, unsigned char y, unsigned char *string){
     unsigned char current_byte;
     unsigned char i = 0;
+    unsigned char j = 0;
 
     while (string[i] != '\0') {
         current_byte = string[i];
 
         ssd1306_draw_ASCII(x, y, current_byte - 0x20);
-        printf("ASCII: %d\n", current_byte);
         x += 7; // Move to the next character position
+
+        if (x > 128) {
+            x = 0; // Reset x position if it exceeds the screen width
+            y += 8; // Move to the next line
+        }
+
+        if (y > 24) {
+            y = 0; // Reset y position if it exceeds the screen height
+        }
+
         i++;
         sleep_ms(100); // Add a delay between characters
     }
@@ -84,60 +100,14 @@ int main()
     unsigned char current_byte;
 
     for (int i = 0; i < 5; i++) {
-        current_byte = ASCII[character][i];
-
-        ssd1306_update_vertical_byte(x + i, y, current_byte);
-    }
-    ssd1306_update();
-}
-
-
-void ssd1306_update_vertical_byte(unsigned char x, unsigned char y, unsigned char byte){
-    if (0b1 & byte) {
-        ssd1306_drawPixel(x, y, 1);
-    } else {
-        ssd1306_drawPixel(x, y, 0);
-    }
-
-    if (0b1 << 1 & byte) {
-        ssd1306_drawPixel(x, y + 1, 1);
-    } else {
-        ssd1306_drawPixel(x, y + 1, 0);
-    }
-
-    if (0b1 << 2 & byte) {
-        ssd1306_drawPixel(x, y + 2, 1);
-    } else {
-        ssd1306_drawPixel(x, y + 2, 0);
-    }
-
-    if (0b1 << 3 & byte) {
-        ssd1306_drawPixel(x, y + 3, 1);
-    } else {
-        ssd1306_drawPixel(x, y + 3, 0);
+        for (int j = 0; j < 8; j++) {
+            if (ASCII[character][i] & (1 << j)) {
+                ssd1306_drawPixel(x + i, y + j, 1);
+            } else {
+                ssd1306_drawPixel(x + i, y + j, 0);
+            }
+        }
     }
     
-    if (0b1 << 4 & byte) {
-        ssd1306_drawPixel(x, y + 4, 1);
-    } else {
-        ssd1306_drawPixel(x, y + 4, 0);
-    }
-
-    if (0b1 << 5 & byte) {
-        ssd1306_drawPixel(x, y + 5, 1);
-    } else {
-        ssd1306_drawPixel(x, y + 5, 0);
-    }
-
-    if (0b1 << 6 & byte) {
-        ssd1306_drawPixel(x, y + 6, 1);
-    } else {
-        ssd1306_drawPixel(x, y + 6, 0);
-    }
-
-    if (0b1 << 7 & byte) {
-        ssd1306_drawPixel(x, y + 7, 1);
-    } else {
-        ssd1306_drawPixel(x, y + 7, 0);
-    }
+    ssd1306_update();
 }
