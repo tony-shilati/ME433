@@ -79,7 +79,7 @@ int main()
         for(int i=0;i<NUM_PIXELS;i++){
             put_pixel(pio, sm, urgb_u32(colors[i].r, colors[i].g, colors[i].b)); // assuming you've made arrays of colors to send
         }
-        sleep_ms(1); // wait at least the reset time
+        sleep_us(1220); // wait at least the reset time
 
         led_counter++;
         if (led_counter > 4095) {
