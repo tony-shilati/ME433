@@ -35,23 +35,38 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(Hw8 Hw8.c )
+add_executable(Hw8)
 
-pico_set_program_name(Hw8 "Hw8")
-pico_set_program_version(Hw8 "0.1")
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/generated)
 
-# Modify the below lines to enable/disable output over UART/USB
-pico_enable_stdio_uart(Hw8 0)
-pico_enable_stdio_usb(Hw8 0)
+# generate the header file into the source tree as it is included in the RP2040 datasheet
+pico_generate_pio_header(Hw8 ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)
 
-# Add the standard library to the build
-target_link_libraries(Hw8
-        pico_stdlib)
+target_sources(Hw8 PRIVATE Hw8.c)
 
-# Add the standard include files to the build
-target_include_directories(Hw8 PRIVATE
-        ${CMAKE_CURRENT_LIST_DIR}
-)
-
+target_link_libraries(Hw8 PRIVATE pico_stdlib hardware_pio)
 pico_add_extra_outputs(Hw8)
 
+# add url via pico_set_program_url
+
+add_executable(pio_ws2812_parallel)
+
+pico_generate_pio_header(pio_ws2812_parallel ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)
+
+target_sources(pio_ws2812_parallel PRIVATE ws2812_parallel.c)
+
+target_compile_definitions(pio_ws2812_parallel PRIVATE
+        PIN_DBG1=3)
+
+target_link_libraries(pio_ws2812_parallel PRIVATE pico_stdlib hardware_pio hardware_dma)
+pico_add_extra_outputs(pio_ws2812_parallel)
+
+# add url via pico_set_program_url
+
+# Additionally generate python and hex pioasm outputs for inclusion in the RP2040 datasheet
+add_custom_target(pio_ws2812_datasheet DEPENDS ${CMAKE_CURRENT_LIST_DIR}/generated/ws2812.py)
+add_custom_command(OUTPUT ${CMAKE_CURRENT_LIST_DIR}/generated/ws2812.py
+        DEPENDS ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio
+        COMMAND pioasm -o python ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio ${CMAKE_CURRENT_LIST_DIR}/generated/ws2812.py
+        VERBATIM)
+add_dependencies(Hw8 pio_ws2812_datasheet)
