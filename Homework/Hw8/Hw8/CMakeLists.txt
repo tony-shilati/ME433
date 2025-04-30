@@ -42,9 +42,9 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/generated)
 # generate the header file into the source tree as it is included in the RP2040 datasheet
 pico_generate_pio_header(Hw8 ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)
 
-target_sources(Hw8 PRIVATE Hw8.c)
+target_sources(Hw8 PRIVATE Hw8.c colors.c)
 
-target_link_libraries(Hw8 PRIVATE pico_stdlib hardware_pio)
+target_link_libraries(Hw8 PRIVATE pico_stdlib hardware_pio hardware_pwm)
 pico_add_extra_outputs(Hw8)
 
 # add url via pico_set_program_url
