@@ -45,8 +45,8 @@ void core1_entry() {
         printf("Its all gone well on core 1!\n");
 
     while (1){
-        while(!multicore_fifo_rvalid()){;}
 
+        while(!multicore_fifo_rvalid()){;}
         uint32_t msg_core0 = multicore_fifo_pop_blocking();
 
         switch (msg_core0) {
@@ -61,12 +61,13 @@ void core1_entry() {
                 break;
 
             case FLAG_TURN_OFF_LED:
-                gpio_put(LED_PIN, 1);
+                gpio_put(LED_PIN, 0); // Correctly turn off the LED
                 multicore_fifo_push_blocking(CORE1_READY);
                 break;
 
             default:
-                multicore_fifo_push_blocking(FLAG_CORE1_ERR);
+                printf("Unknown command received on core 1: %u\r\n", msg_core0);
+                multicore_fifo_push_blocking(CORE1_READY); // Acknowledge unknown command
                 break;
         }
         
@@ -98,15 +99,32 @@ int main() {
     uint32_t usr_msg;
 
     while (true){
-        printf("Send a command:\r\n1: Read Volatage\r\n2: turn on LED\r\n3: turn off LED\r\n");
+        printf("Send a command:\r\n1: Read Voltage\r\n2: turn on LED\r\n3: turn off LED\r\n");
         scanf("%d", &usr_msg);
+        printf("Received msg %d\r\n", usr_msg);
 
-        multicore_fifo_push_blocking(usr_msg);
+        switch (usr_msg) {
+            case 1:
+                multicore_fifo_push_blocking(FLAG_READ_ADC);
+                break;
+
+            case 2:
+                multicore_fifo_push_blocking(FLAG_TURN_ON_LED);
+                break;
+
+            case 3:
+                multicore_fifo_push_blocking(FLAG_TURN_OFF_LED);
+                break;
+
+            // Remove default case to avoid sending invalid commands
+        }
+        
+
         while(!multicore_fifo_rvalid()){;}
         g = multicore_fifo_pop_blocking();
-
+        float adc_val_float = adc_val * 3.3f / 4095.0f;
         if (usr_msg == FLAG_READ_ADC && g == CORE1_READY){
-            printf("ADC reading: %1.2f V", &adc_val);
+            printf("ADC reading: %1.2f V\r\n", adc_val_float); // Remove '&'
         }
 
         if (g == FLAG_CORE1_ERR){
