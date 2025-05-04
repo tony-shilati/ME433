@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "pico/multicore.h"
+#include "hardware/adc.h"
 
 #define CORE0_READY 10
 #define CORE1_READY 11
@@ -15,7 +16,11 @@
 #define FLAG_TURN_ON_LED 2
 #define FLAG_TURN_OFF_LED 3
 
+#define FLAG_CORE1_ERR 20
+
 #define LED_PIN 15
+
+volatile uint16_t adc_val;
 
 void core1_entry() {
 
@@ -30,6 +35,8 @@ void core1_entry() {
     adc_select_input(0); // select to read from ADC0
 
     multicore_fifo_push_blocking(CORE1_READY);
+
+    while(!multicore_fifo_rvalid()){;}
     uint32_t g = multicore_fifo_pop_blocking();
 
     if (g != CORE0_READY)
@@ -37,8 +44,33 @@ void core1_entry() {
     else
         printf("Its all gone well on core 1!\n");
 
-    while (1)
-        tight_loop_contents();
+    while (1){
+        while(!multicore_fifo_rvalid()){;}
+
+        uint32_t msg_core0 = multicore_fifo_pop_blocking();
+
+        switch (msg_core0) {
+            case FLAG_READ_ADC:
+                adc_val = adc_read();
+                multicore_fifo_push_blocking(CORE1_READY);
+                break;
+
+            case FLAG_TURN_ON_LED:
+                gpio_put(LED_PIN, 1);
+                multicore_fifo_push_blocking(CORE1_READY);
+                break;
+
+            case FLAG_TURN_OFF_LED:
+                gpio_put(LED_PIN, 1);
+                multicore_fifo_push_blocking(CORE1_READY);
+                break;
+
+            default:
+                multicore_fifo_push_blocking(FLAG_CORE1_ERR);
+                break;
+        }
+        
+    }
 }
 
 int main() {
@@ -47,27 +79,43 @@ int main() {
         sleep_ms(100);
     }
 
-
-    printf("Send a command:\r\n1: Read Volatage\r\n2: turn on LED\r\n3: turn off LED\r\n");
-
     /// \tag::setup_multicore[]
     multicore_launch_core1(core1_entry);
     sleep_ms(1);
 
     // Wait for it to start up
     multicore_fifo_push_blocking(CORE0_READY);
+    while(!multicore_fifo_rvalid()){;}
     uint32_t g = multicore_fifo_pop_blocking();
 
     if (g != CORE1_READY)
         printf("Hmm, that's not right on core 0!\n");
     else {
-        multicore_fifo_push_blocking(FLAG_VALUE);
+        multicore_fifo_push_blocking(CORE0_READY);
         printf("It's all gone well on core 0!\n");
     }
 
+    uint32_t usr_msg;
+
     while (true){
+        printf("Send a command:\r\n1: Read Volatage\r\n2: turn on LED\r\n3: turn off LED\r\n");
+        scanf("%d", &usr_msg);
+
+        multicore_fifo_push_blocking(usr_msg);
+        while(!multicore_fifo_rvalid()){;}
+        g = multicore_fifo_pop_blocking();
+
+        if (usr_msg == FLAG_READ_ADC && g == CORE1_READY){
+            printf("ADC reading: %1.2f V", &adc_val);
+        }
+
+        if (g == FLAG_CORE1_ERR){
+            printf("CORE 1 ERROR");
+            while (1) {;}
+        }
 
     }
 
     /// \end::setup_multicore[]
 }
+
