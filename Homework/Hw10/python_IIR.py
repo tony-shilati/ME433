@@ -4,13 +4,13 @@ import pandas as pd
 
 
 # Read the csv file
-data = pd.read_csv('signals/sigD.csv', header=None)
+data = pd.read_csv('signals/sigA.csv', header=None)
 # Extract the columns
 t = data[0].values  # time
 s = data[1].values  # signal
 
 # Number of points to average
-X = 100
+X = 50
 
 # Storage for filtered data
 s_maf = [];
