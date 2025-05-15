@@ -12,19 +12,23 @@ s = data[1].values  # signal
 # Number of points to average
 X = 50
 
+# IIR Filter Coefficients
+A = 0.5
+B = 0.5
 # Storage for filtered data
-s_maf = [];
+s_iir = [s[0]]
 avg_buffer = np.zeros(X)
 
 
-for i in range(len(s)):
+for i in range(1, len(s)):
     avg_buffer = np.insert(avg_buffer, 0, s[i])[:-1]
-    s_maf.append(np.mean(avg_buffer))
+    s_iir.append(A * s_iir[i-1] + B * s[i])
 
 plt.plot(t, s, 'k')
 plt.xlabel('Time')
 plt.ylabel('Amplitude')
-plt.plot(t, s_maf, 'r')  # changed color to red for the filtered data
+plt.plot(t, s_iir, 'r')  # changed color to red for the filtered data
 plt.legend(["Raw Data", "Filtered Data"])
-plt.title("MAF of sigD with X = 100")
+plt.title("MAF of sigD with A = 0.5, B = 0.5")
+plt.grid()
 plt.show()
