@@ -38,6 +38,7 @@
 #define DOWN 15
 #define LEFT 12
 #define RIGHT 14
+#define MODE 16
 
 //--------------------------------------------------------------------+
 // MACRO CONSTANT TYPEDEF PROTYPES
@@ -59,11 +60,7 @@ volatile bool mode = true; // true = regular mode, false = remote work mode
 
 volatile int8_t deltax = 0;
 volatile int8_t deltay = 0;
-
-volatile px_speed = 0;
-volatile nx_speed = 0;
-volatile py_speed = 0;
-volatile ny_speed = 0;
+volatile uint8_t motion_speed = 3;
 
 
 void led_blinking_task(void);
@@ -99,45 +96,79 @@ int main(void)
   gpio_set_dir(RIGHT, GPIO_IN);
   gpio_pull_up(RIGHT);
 
+  gpio_init(MODE);
+  gpio_set_dir(MODE, GPIO_IN);
+  gpio_pull_up(MODE);
+
   uint32_t start_time = board_millis();
+  uint32_t motion_timer = board_millis();
+
+  uint8_t motion = 0;
+  uint8_t motion_prev = 0;
 
   while (1)
   {
-    
+    // Handle motion speed
+    motion_prev = motion;
+    motion = abs(deltax) + abs(deltay);
+
+    if (motion > 0 && motion_prev == 0) {
+      motion_timer = board_millis();
+
+    } else if (motion == 0 && motion_prev > 0) {
+      motion_speed = 3;
+    }
+
+    if (motion > 0) {
+      uint32_t motion_time = board_millis() - motion_timer;
+      if (motion_time > 750 && motion_time < 1500) {
+        motion_speed = 6;
+      } else if (motion_time > 1500) {
+        motion_speed = 12;
+      } else {
+        motion_speed = 3;
+      }
+    }
+
+
+    // tinyusb device task
     tud_task(); // tinyusb device task
     led_blinking_task();
     set_direction();
     hid_task();
 
-    /*
-    if (board_millis() - start_time > 200) {
-      if (gpio_get(UP) && gpio_get(RIGHT)){
+     // Check if the mode button is pressed
+    if (board_millis() - start_time > 1000) {
+      if (!gpio_get(MODE)) {
         mode = !mode; // Toggle mode every second
+        start_time = board_millis();
       }
     }
-      */
+    
   }
 }
 
 
 void set_direction(){
+
+
   if (mode){
         if (!gpio_get(UP)) {
           // Move mouse up
-          deltay = -3;
+          deltay = -motion_speed;
         } else if (!gpio_get(DOWN)) {
           // Move mouse down
-          deltay = 3;
+          deltay = motion_speed;
         } else {
           deltay = 0;
         }
         
         if (!gpio_get(LEFT)) {
           // Move mouse left
-          deltax = -3;
+          deltax = -motion_speed;
         } else if (!gpio_get(RIGHT)) {
           // Move mouse right
-          deltax = 3;
+          deltax = motion_speed;
         } else {
           deltax = 0;
         }
