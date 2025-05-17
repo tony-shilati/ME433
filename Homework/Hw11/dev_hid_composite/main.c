@@ -36,7 +36,7 @@
 
 #define UP 13
 #define DOWN 15
-#define LEFT 16
+#define LEFT 12
 #define RIGHT 14
 
 //--------------------------------------------------------------------+
@@ -55,10 +55,20 @@ enum  {
 };
 
 static uint32_t blink_interval_ms = BLINK_NOT_MOUNTED;
-volatile bool mode = false; // true = regular mode, false = remote work mode
+volatile bool mode = true; // true = regular mode, false = remote work mode
+
+volatile int8_t deltax = 0;
+volatile int8_t deltay = 0;
+
+volatile px_speed = 0;
+volatile nx_speed = 0;
+volatile py_speed = 0;
+volatile ny_speed = 0;
+
 
 void led_blinking_task(void);
 void hid_task(void);
+void set_direction(void);
 
 /*------------- MAIN -------------*/
 int main(void)
@@ -75,19 +85,19 @@ int main(void)
   // Initialize button pins
   gpio_init(UP);
   gpio_set_dir(UP, GPIO_IN);
-  gpio_pull_down(UP);
+  gpio_pull_up(UP);
 
   gpio_init(DOWN);
   gpio_set_dir(DOWN, GPIO_IN);
-  gpio_pull_down(DOWN);
+  gpio_pull_up(DOWN);
 
   gpio_init(LEFT);
   gpio_set_dir(LEFT, GPIO_IN);
-  gpio_pull_down(LEFT);
+  gpio_pull_up(LEFT);
 
   gpio_init(RIGHT);
   gpio_set_dir(RIGHT, GPIO_IN);
-  gpio_pull_down(RIGHT);
+  gpio_pull_up(RIGHT);
 
   uint32_t start_time = board_millis();
 
@@ -96,14 +106,46 @@ int main(void)
     
     tud_task(); // tinyusb device task
     led_blinking_task();
+    set_direction();
     hid_task();
 
+    /*
     if (board_millis() - start_time > 200) {
       if (gpio_get(UP) && gpio_get(RIGHT)){
         mode = !mode; // Toggle mode every second
       }
     }
+      */
   }
+}
+
+
+void set_direction(){
+  if (mode){
+        if (!gpio_get(UP)) {
+          // Move mouse up
+          deltay = -3;
+        } else if (!gpio_get(DOWN)) {
+          // Move mouse down
+          deltay = 3;
+        } else {
+          deltay = 0;
+        }
+        
+        if (!gpio_get(LEFT)) {
+          // Move mouse left
+          deltax = -3;
+        } else if (!gpio_get(RIGHT)) {
+          // Move mouse right
+          deltax = 3;
+        } else {
+          deltax = 0;
+        }
+
+      } else {
+        deltax = 10*cos(board_millis()/1000.0);
+        deltay = 10*sin(board_millis()/1000.0);
+      }
 }
 
 //--------------------------------------------------------------------+
@@ -171,37 +213,6 @@ static void send_hid_report(uint8_t report_id, uint32_t btn)
 
     case REPORT_ID_MOUSE:
     { 
-      int8_t deltax = 0;
-      int8_t deltay = 0;
-
-      if (mode){
-        if (gpio_get(UP)) {
-          // Move mouse up
-          deltax = 0;
-          deltay = -10;
-        } else if (gpio_get(DOWN)) {
-          // Move mouse down
-          deltax = 0;
-          deltay = 10;
-        } 
-        
-        if (gpio_get(LEFT)) {
-          // Move mouse left
-          deltax = -10;
-          deltay = 0;
-        } else if (gpio_get(RIGHT)) {
-          // Move mouse right
-          deltax = 10;
-          deltay = 0;
-        }
-
-      } else {
-        deltax = 10*cos(board_millis()/1000.0);
-        deltay = 10*sin(board_millis()/1000.0);
-      }
-
-      
-
       // no button, right + down, no scroll, no pan
       tud_hid_mouse_report(REPORT_ID_MOUSE, 0x00, deltax, deltay, 0, 0);
     }
