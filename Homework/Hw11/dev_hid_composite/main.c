@@ -55,6 +55,7 @@ enum  {
 };
 
 static uint32_t blink_interval_ms = BLINK_NOT_MOUNTED;
+volatile bool mode = false; // true = regular mode, false = remote work mode
 
 void led_blinking_task(void);
 void hid_task(void);
@@ -88,11 +89,20 @@ int main(void)
   gpio_set_dir(RIGHT, GPIO_IN);
   gpio_pull_down(RIGHT);
 
+  uint32_t start_time = board_millis();
+
   while (1)
   {
+    
     tud_task(); // tinyusb device task
     led_blinking_task();
     hid_task();
+
+    if (board_millis() - start_time > 200) {
+      if (gpio_get(UP) && gpio_get(RIGHT)){
+        mode = !mode; // Toggle mode every second
+      }
+    }
   }
 }
 
@@ -161,10 +171,35 @@ static void send_hid_report(uint8_t report_id, uint32_t btn)
 
     case REPORT_ID_MOUSE:
     { 
-      int8_t const delta = 5;
+      int8_t deltax = 0;
+      int8_t deltay = 0;
 
-      int8_t const deltax = 10*cos(board_millis()/1000.0);
-      int8_t const deltay = 10*sin(board_millis()/1000.0);
+      if (mode){
+        if (gpio_get(UP)) {
+          // Move mouse up
+          deltax = 0;
+          deltay = -10;
+        } else if (gpio_get(DOWN)) {
+          // Move mouse down
+          deltax = 0;
+          deltay = 10;
+        } 
+        
+        if (gpio_get(LEFT)) {
+          // Move mouse left
+          deltax = -10;
+          deltay = 0;
+        } else if (gpio_get(RIGHT)) {
+          // Move mouse right
+          deltax = 10;
+          deltay = 0;
+        }
+
+      } else {
+        deltax = 10*cos(board_millis()/1000.0);
+        deltay = 10*sin(board_millis()/1000.0);
+      }
+
       
 
       // no button, right + down, no scroll, no pan
