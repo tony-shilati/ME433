@@ -77,7 +77,7 @@ int main()
         printf("Gyro X: %d, Y: %d, Z: %d\n", data[4], data[5], data[6]);
         printf("Temperature: %d\n", data[3]);
         ssd1306_clear(); // Clear the display before drawing
-        draw_arrow(data[0] / 16384.0 * 100, data[1] / 16384.0 * 100); // Scale accelerometer data
+        draw_arrow(-1 * data[0] / 16384.0 * 100, -1 * data[1] / 16384.0 * 100); // Scale accelerometer data
         ssd1306_update(); // Update the display with the new drawing
         sleep_ms(10);
     }
