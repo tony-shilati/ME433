@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
+#include "ssd1306.h"
+#include "font.h"
+#include "math.h"
 
 // I2C defines
 #define I2C_PORT i2c0
@@ -9,6 +12,12 @@
 
 // IMU Address
 #define MPU6050_ADDR 0x68 // I2C address of the MPU6050
+#define ssd1306_ADDR 0x3C // I2C address of the SSD1306 OLED display
+
+// Center of the display for drawing the arrow
+#define C 30 // Scale factor for the arrow length
+#define x_center 64 // Center x-coordinate of the OLED display
+#define y_center 16 // Center y-coordinate of the OLED display
 
 // IMU config registers
 #define CONFIG 0x1A
@@ -37,19 +46,25 @@
 // Prototypes
 void read_IMU_data(int16_t *data);
 void config_IMU();
+void draw_arrow(float accel_x, float accel_y);
 
 int main()
 {
     stdio_init_all();
 
     // I2C Initialisation. Using it at 400Khz.
-    i2c_init(I2C_PORT, 400*1000);
+    i2c_init(I2C_PORT, 1000*1000);
     
     gpio_set_function(I2C_SDA, GPIO_FUNC_I2C);
     gpio_set_function(I2C_SCL, GPIO_FUNC_I2C);
 
     // Configure the IMU
     config_IMU();
+
+    // Set up the SSD1306 OLED display
+    ssd1306_setup();
+    ssd1306_clear();
+    ssd1306_update();
 
     int16_t data[8]; // Array to store sensor data
 
@@ -61,9 +76,17 @@ int main()
         printf("Accel X: %d, Y: %d, Z: %d\n", data[0], data[1], data[2]);
         printf("Gyro X: %d, Y: %d, Z: %d\n", data[4], data[5], data[6]);
         printf("Temperature: %d\n", data[3]);
-        sleep_ms(1000);
+        ssd1306_clear(); // Clear the display before drawing
+        draw_arrow(data[0] / 16384.0 * 100, data[1] / 16384.0 * 100); // Scale accelerometer data
+        ssd1306_update(); // Update the display with the new drawing
+        sleep_ms(10);
     }
 }
+
+
+/*
+ * Helper Functions
+*/
 
 void config_IMU(){
 
@@ -95,4 +118,36 @@ void read_IMU_data(int16_t *data) {
     data[6] = (byte_data[12] << 8) | byte_data[13]; // Z-axis gyroscope
     data[7] = byte_data[14]; // WHO_AM_I
 
+}
+
+
+// Borrowed from d1123d's code for drawing an arrow on the SSD1306 display
+void draw_arrow(float accel_x, float accel_y) {
+    ssd1306_clear();
+
+    int x0 = x_center;
+    int y0 = y_center;
+
+    int x1 = x0 + accel_x;
+    int y1 = y0 - accel_y; // Invert Y-axis
+
+    // Draw main arrow line
+    ssd1306_draw_line(x0, y0, x1, y1, 1);
+
+    // ==== Arrowhead ====
+    float angle = atan2(y1 - y0, x1 - x0); // Angle of the arrow
+    float arrow_length = 5.0;              // Length of each side of the arrowhead
+    float arrow_angle = M_PI / 6;          // 30 degrees
+
+    // Points for left side of arrowhead
+    int x2 = x1 - (int)(arrow_length * cos(angle - arrow_angle));
+    int y2 = y1 - (int)(arrow_length * sin(angle - arrow_angle));
+
+    // Points for right side of arrowhead
+    int x3 = x1 - (int)(arrow_length * cos(angle + arrow_angle));
+    int y3 = y1 - (int)(arrow_length * sin(angle + arrow_angle));
+
+    // Draw the two arrowhead lines
+    ssd1306_draw_line(x1, y1, x2, y2, 1);
+    ssd1306_draw_line(x1, y1, x3, y3, 1);
 }
