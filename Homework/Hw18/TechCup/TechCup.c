@@ -23,7 +23,7 @@ int main()
     motor_init(MOTOR1_PH, MOTOR1_EN);
     motor_init(MOTOR2_PH, MOTOR2_EN);
 
-    float base_pwm = 0.22f;
+    float base_pwm = 0.35f;
     float control_pwm = 0.19f;
 
     float u1 = 0.0f; // speed of left motor
@@ -36,8 +36,8 @@ int main()
         convertImage();
         int com = findLine(IMAGESIZEY/2); // find the com of the line
 
-        double error_func = tanh((double) ((com * 1.0f - (IMAGESIZEX/2)) / 27.0f)) - 0.05; // calculate the error function
-        // double error_func = (com - (IMAGESIZEX/2)) / 20.0f; // calculate the error function
+        // double error_func = tanh((double) ((com * 1.0f - (IMAGESIZEX/2)) / 30.0f)) - 0.075; // calculate the error function
+        double error_func = pow((com - (IMAGESIZEX/2)) / 20.0f, 2); // calculate the error function
 
 
         if (error_func > 1.0f) {
@@ -49,11 +49,11 @@ int main()
         if (error_func < 0.0f) {
             // Turn right
             u1 = fabs(error_func);
-            u2 = -fabs(error_func); // reduce speed of left motor
+            u2 = -fabs(error_func) * 1.35f; // reduce speed of left motor
 
         } else if (error_func > 0.0f) {
             // Turn left
-            u1 = -fabs(error_func); // reduce speed of right motor
+            u1 = -fabs(error_func)*1.35f; // reduce speed of right motor
             u2 = fabs(error_func);
             
         } else {
@@ -62,8 +62,8 @@ int main()
             u2 = 0.0f;
         }
 
-        float pwm_1 = 1.0f - (base_pwm + (u1 * control_pwm));
-        float pwm_2 = 1.0f - (base_pwm + (u2 * control_pwm));
+        float pwm_1 = (1.0f - (base_pwm + (u1 * control_pwm)));
+        float pwm_2 = (1.0f - (base_pwm + (u2 * control_pwm)));
 
         // Ensure PWM values are within bounds
         if (pwm_1 < 0.0f) {
