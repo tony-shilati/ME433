@@ -40,7 +40,7 @@ int main()
 
     pwm_set_gpio_level(SERVO_PIN, wrap * 0.025); // set the duty cycle to 50%
 
-    // todo get free sm
+    // todo get free smd
     PIO pio;
     uint sm;
     uint offset;
